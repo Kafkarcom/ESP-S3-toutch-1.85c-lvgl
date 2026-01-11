@@ -1,6 +1,8 @@
 dependencies:
-  # lvgl/lvgl:
-  #   version: "^9.2.0"  # Latest LVGL v9
+  lvgl/lvgl:
+    version: "^9.2.0"  # Latest LVGL v9
+  espressif/esp_lvgl_port:
+    version: "*"
   espressif/esp_lcd_st77916:
     version: "*"
   espressif/esp_lcd_touch:

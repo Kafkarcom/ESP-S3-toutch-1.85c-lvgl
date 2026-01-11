@@ -10,7 +10,17 @@
 #include "touch.h"                  // Touch functions
 #include "extendio.h"               // Extended IO functions
 
+#include "esp_lvgl_port.h"          // LVGL port for ESP-IDF
+#include "lvgl.h"                   // LVGL library
+
 static const char *TAG = "Touch 1.85 sampole";
+
+static void lvgl_task(void *pvParameter) {
+    while (1) {
+        lv_timer_handler();
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
 
 void app_main(void)
 {
@@ -23,9 +33,41 @@ void app_main(void)
 
     // --- 3. CONFIGURE LCD PANEL ---
     esp_lcd_panel_handle_t panel_handle = NULL;
-    ESP_ERROR_CHECK(display_init(&panel_handle));
+    esp_lcd_panel_io_handle_t io_handle = NULL;
+    ESP_ERROR_CHECK(display_init(&panel_handle, &io_handle));
 
     ESP_LOGI(TAG, "Heartbeat: ST77916 360x360 is active!");
+
+    // --- 4. INITIALIZE LVGL ---
+    const lvgl_port_cfg_t lvgl_cfg = ESP_LVGL_PORT_INIT_CONFIG();
+    ESP_ERROR_CHECK(lvgl_port_init(&lvgl_cfg));
+
+    const lvgl_port_display_cfg_t disp_cfg = {
+        .io_handle = io_handle,
+        .panel_handle = panel_handle,
+        .buffer_size = LCD_H_RES * LCD_V_RES * 2 / 10,  // 1/10th of screen size in bytes for partial rendering
+        .double_buffer = true,
+        .hres = LCD_H_RES,
+        .vres = LCD_V_RES,
+        .monochrome = false,
+        .rotation = {
+            .swap_xy = false,
+            .mirror_x = false,
+            .mirror_y = false,
+        },
+        .flags = {
+            .buff_dma = true,
+        }
+    };
+    lv_display_t *disp = lvgl_port_add_disp(&disp_cfg);
+
+    // Create a label
+    lv_obj_t *label = lv_label_create(lv_screen_active());
+    lv_label_set_text(label, "Hello World");
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+
+    // Set backlight
+    set_backlight_brightness(50);
 
 
     // --- 2. SELECTIVE TOUCH RESET VIA TCA9554 ---
@@ -39,36 +81,13 @@ void app_main(void)
     // --- After LCD/Touch Initialization is complete ---
     touch_start(touch_handle);
 
-    ESP_LOGI(TAG, "System Ready. Touch screen to cycle colors!");
+    ESP_LOGI(TAG, "System Ready. LVGL UI is running!");
 
+    // Create LVGL task
+    xTaskCreate(lvgl_task, "lvgl", 4096, NULL, 5, NULL);
+
+    // Keep the main task alive
     while (1) {
-        ESP_LOGI(TAG, "ST77916 is still alive");
-
-        ESP_LOGI(TAG, "Filling Red");
-        set_backlight_brightness(0);
-        lcd_fill_screen(panel_handle, 0xF800);
-        vTaskDelay(pdMS_TO_TICKS(2000));
-
-        ESP_LOGI(TAG, "Filling Red");
-
-        for (int i = 0; i < 101; i++) {
-            set_backlight_brightness(i);
-            vTaskDelay(pdMS_TO_TICKS(20));  
-        }
-
-        for (int i = 101; i > -1; i--) {
-            set_backlight_brightness(i);
-            vTaskDelay(pdMS_TO_TICKS(20));  
-        }
-
-        ESP_LOGI(TAG, "Filling Green");
-        set_backlight_brightness(60);
-        lcd_fill_screen(panel_handle, 0x07E0);
-        vTaskDelay(pdMS_TO_TICKS(2000));
-
-        ESP_LOGI(TAG, "Filling Blue");
-        set_backlight_brightness(20);
-        lcd_fill_screen(panel_handle, 0x001F);
-        vTaskDelay(pdMS_TO_TICKS(2000));        
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

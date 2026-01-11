@@ -315,7 +315,7 @@ void draw_circle(esp_lcd_panel_handle_t panel_handle, uint16_t x_center, uint16_
  * @param panel_handle Pointer to store the panel handle
  * @return ESP_OK on success
  */
-esp_err_t display_init(esp_lcd_panel_handle_t *panel_handle) {
+esp_err_t display_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_handle_t *io_handle) {
     // Initialize QSPI bus
     spi_bus_config_t buscfg = {
         .sclk_io_num = LCD_SCK,
@@ -330,7 +330,7 @@ esp_err_t display_init(esp_lcd_panel_handle_t *panel_handle) {
     ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
     // Configure LCD panel IO
-    esp_lcd_panel_io_handle_t io_handle = NULL;
+    esp_lcd_panel_io_handle_t panel_io_handle = NULL;
     esp_lcd_panel_io_spi_config_t io_config = {
         .dc_gpio_num = -1,
         .cs_gpio_num = LCD_CS,
@@ -341,7 +341,7 @@ esp_err_t display_init(esp_lcd_panel_handle_t *panel_handle) {
         .trans_queue_depth = 10,
         .flags.quad_mode = true,
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)SPI2_HOST, &io_config, &io_handle));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)SPI2_HOST, &io_config, &panel_io_handle));
 
     // Configure panel
     st77916_vendor_config_t vendor_config = {
@@ -357,7 +357,7 @@ esp_err_t display_init(esp_lcd_panel_handle_t *panel_handle) {
         .vendor_config = &vendor_config,
     };
 
-    ESP_ERROR_CHECK(esp_lcd_new_panel_st77916(io_handle, &panel_config, panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_st77916(panel_io_handle, &panel_config, panel_handle));
 
     ESP_ERROR_CHECK(esp_lcd_panel_init(*panel_handle));
 
@@ -367,6 +367,8 @@ esp_err_t display_init(esp_lcd_panel_handle_t *panel_handle) {
     gpio_set_direction(LCD_BL, GPIO_MODE_OUTPUT);
     gpio_set_level(LCD_BL, 1);
     backlight_init();
+
+    *io_handle = panel_io_handle;
 
     return ESP_OK;
 }
