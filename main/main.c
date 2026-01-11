@@ -15,6 +15,20 @@
 
 static const char *TAG = "Touch 1.85 sampole";
 
+static int color_index = 0;
+
+static void btn_event_cb(lv_event_t * e) {
+    lv_obj_t * btn = lv_event_get_target(e);
+    color_index = (color_index + 1) % 3;
+    if (color_index == 0) {
+        lv_obj_set_style_bg_color(btn, lv_color_make(255, 0, 0), 0); // Red
+    } else if (color_index == 1) {
+        lv_obj_set_style_bg_color(btn, lv_color_make(0, 255, 0), 0); // Green
+    } else {
+        lv_obj_set_style_bg_color(btn, lv_color_make(0, 0, 255), 0); // Blue
+    }
+}
+
 static void lvgl_task(void *pvParameter) {
     while (1) {
         lv_timer_handler();
@@ -60,11 +74,27 @@ void app_main(void)
         }
     };
     lv_display_t *disp = lvgl_port_add_disp(&disp_cfg);
+    if (disp == NULL) {
+        ESP_LOGE(TAG, "Failed to create LVGL display");
+        return;
+    }
 
     // Create a label
     lv_obj_t *label = lv_label_create(lv_screen_active());
     lv_label_set_text(label, "Hello World");
     lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+
+    // Create a button
+    lv_obj_t *btn = lv_btn_create(lv_screen_active());
+    lv_obj_set_size(btn, 120, 50);
+    lv_obj_align(btn, LV_ALIGN_CENTER, 0, 60);
+    lv_obj_set_style_bg_color(btn, lv_color_make(255, 0, 0), 0); // Initial red
+    lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_CLICKED, NULL);
+
+    // Add label to button
+    lv_obj_t *btn_label = lv_label_create(btn);
+    lv_label_set_text(btn_label, "Change Color");
+    lv_obj_center(btn_label);
 
     // Set backlight
     set_backlight_brightness(50);
@@ -80,6 +110,13 @@ void app_main(void)
 
     // --- After LCD/Touch Initialization is complete ---
     touch_start(touch_handle);
+
+    // Register touch with LVGL
+    const lvgl_port_touch_cfg_t touch_cfg = {
+        .disp = disp,
+        .handle = touch_handle,
+    };
+    lvgl_port_add_touch(&touch_cfg);
 
     ESP_LOGI(TAG, "System Ready. LVGL UI is running!");
 
