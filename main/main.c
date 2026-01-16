@@ -29,12 +29,16 @@ static void btn_event_cb(lv_event_t * e) {
     }
 }
 
-static void lvgl_task(void *pvParameter) {
-    while (1) {
-        lv_timer_handler();
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
+static void btn_long_press_cb(lv_event_t * e) {
+    // Do nothing on long press to prevent default behavior that might cause crash
 }
+
+// static void lvgl_task(void *pvParameter) {
+//     while (1) {
+//         lv_timer_handler();
+//         vTaskDelay(pdMS_TO_TICKS(10));
+//     }
+// }
 
 void app_main(void)
 {
@@ -79,25 +83,33 @@ void app_main(void)
         return;
     }
 
-    // Create a label
-    lv_obj_t *label = lv_label_create(lv_screen_active());
-    lv_label_set_text(label, "Hello World");
-    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
 
-    // Create a button
-    lv_obj_t *btn = lv_btn_create(lv_screen_active());
-    lv_obj_set_size(btn, 120, 50);
-    lv_obj_align(btn, LV_ALIGN_CENTER, 0, 60);
-    lv_obj_set_style_bg_color(btn, lv_color_make(255, 0, 0), 0); // Initial red
-    lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_CLICKED, NULL);
+    /* Lock the mutex due to the LVGL task running */
+    if (lvgl_port_lock(0)) {
+        // Create a label
+        lv_obj_t *label = lv_label_create(lv_screen_active());
+        lv_label_set_text(label, "Hello World");
+        lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
 
-    // Add label to button
-    lv_obj_t *btn_label = lv_label_create(btn);
-    lv_label_set_text(btn_label, "Change Color");
-    lv_obj_center(btn_label);
+        // Create a button
+        lv_obj_t *btn = lv_btn_create(lv_screen_active());
+        lv_obj_set_size(btn, 120, 50);
+        lv_obj_align(btn, LV_ALIGN_CENTER, 0, 60);
+        lv_obj_set_style_bg_color(btn, lv_color_make(255, 0, 0), 0); // Initial red
+        lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_CLICKED, NULL);
+        lv_obj_add_event_cb(btn, btn_long_press_cb, LV_EVENT_LONG_PRESSED, NULL);
 
-    // Set backlight
-    set_backlight_brightness(50);
+        // Add label to button
+        lv_obj_t *btn_label = lv_label_create(btn);
+        lv_label_set_text(btn_label, "Change Color");
+        lv_obj_center(btn_label);
+
+        // Set backlight
+        set_backlight_brightness(50);
+        
+        /* Release the mutex */
+        lvgl_port_unlock();
+    }
 
 
     // --- 2. SELECTIVE TOUCH RESET VIA TCA9554 ---
@@ -121,7 +133,7 @@ void app_main(void)
     ESP_LOGI(TAG, "System Ready. LVGL UI is running!");
 
     // Create LVGL task
-    xTaskCreate(lvgl_task, "lvgl", 4096, NULL, 5, NULL);
+    // xTaskCreate(lvgl_task, "lvgl", 8192, NULL, 5, NULL);
 
     // Keep the main task alive
     while (1) {

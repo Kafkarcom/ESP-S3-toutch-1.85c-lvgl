@@ -72,19 +72,6 @@ static void IRAM_ATTR touch_isr_handler(void *arg) {
 }
 
 void touch_start(esp_lcd_touch_handle_t touch_handle) {
-    // 1. Create the dedicated Touch Task (High Priority)
-    xTaskCreate(touch_process_task, "touch_task", 4096, touch_handle, 10, &touch_task_handle);
-
-    // 2. Configure the Interrupt Pin (GPIO 4)
-    gpio_config_t io_conf = {
-        .intr_type = GPIO_INTR_NEGEDGE, // CST816S pulls LOW on touch
-        .pin_bit_mask = (1ULL << TOUCH_INT_IO),
-        .mode = GPIO_MODE_INPUT,
-        .pull_up_en = GPIO_PULLUP_ENABLE, // Essential for I2C stability
-    };
-    gpio_config(&io_conf);
-
-    // 3. Install ISR service and attach handler
-    gpio_install_isr_service(0);
-    gpio_isr_handler_add(TOUCH_INT_IO, touch_isr_handler, NULL);
+    // Touch handling is now managed by LVGL port, no need for custom task and ISR
+    // Removed task creation and ISR setup to prevent interference with LVGL touch reading
 }
