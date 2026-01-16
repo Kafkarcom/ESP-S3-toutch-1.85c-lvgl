@@ -4,8 +4,7 @@
 #include "esp_log.h"
 #include "esp_lvgl_port.h"
 #include "lvgl.h"
-#include "lvgl_ui.h"
-
+#include "ui.h"
 
 static const char *TAG = "LVGL_MODULE";
 
@@ -32,6 +31,7 @@ void lvgl_module_init(esp_lcd_panel_io_handle_t io_handle,
           },
       .flags = {
           .buff_dma = true,
+          .swap_bytes = true,
       }};
 
   lv_display_t *disp = lvgl_port_add_disp(&disp_cfg);
@@ -52,7 +52,7 @@ void lvgl_module_init(esp_lcd_panel_io_handle_t io_handle,
   /* Lock the mutex due to the LVGL task running */
   if (lvgl_port_lock(0)) {
     // Initialize UI
-    lvgl_ui_init();
+    ui_init();
 
     // Set backlight
     set_backlight_brightness(50);

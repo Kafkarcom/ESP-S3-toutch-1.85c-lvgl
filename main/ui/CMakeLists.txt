@@ -1,0 +1,12 @@
+SET(SOURCES screens/ui_flash_screen.c
+    screens/ui_About.c
+    screens/ui_Screen1.c
+    ui.c
+    components/ui_comp_hook.c
+    ui_helpers.c
+    images/ui_img_kafkar_logo_no_boarder_100_white_png.c
+    fonts/ui_font_ArchivoBlackRegular.c
+    fonts/ui_font_Font1.c
+    fonts/ui_font_MomoTrustDisplay.c)
+
+add_library(ui ${SOURCES})
